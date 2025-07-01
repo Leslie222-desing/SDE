@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Servicio en Elevadors</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    scroll-behavior: smooth;
+    font-family: 'Segoe UI', sans-serif;
+    position: relative;
+  }
+
+  /* Fondo animado suave */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(-45deg, #003366, #0077cc, #001F3F, #005599);
+    background-size: 400% 400%;
+    animation: backgroundWave 20s ease infinite;
+    z-index: -2;
+  }
+
+  @keyframes backgroundWave {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Botonera tipo elevador */
+  .elevator-panel {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    background-color: #003366;
+    border-radius: 10px 0 0 10px;
+    z-index: 1000;
+  }
+
+.elevator-panel a {
+  padding: 1rem 1.2rem;
+  margin: 0.3rem;
+  text-align: center;
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  border-bottom: none;
+  border-radius: 20px; /* Aquí los hacemos redonditos */
+  transition: all 0.3s ease;
+  position: relative;
+  background-color: #003366;
+  box-shadow: inset 0 0 0 transparent, 0 4px 8px rgba(0, 0, 0, 0.3);
+  display: block;
+  width: 60px; /* ancho fijo para que queden como botón */
+  height: 60px; /* altura fija */
+  line-height: 60px; /* centrar texto vertical */
+  font-size: 1rem;
+  user-select: none;
+}
+
+.elevator-panel a:hover {
+  background-color: #005599;
+  box-shadow: inset 0 0 0 transparent, 0 6px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.elevator-panel a:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 3px 5px rgba(0,0,0,0.5);
+}
+
+.elevator-panel a.activo {
+  background: linear-gradient(145deg, #ffe066, #ffd700);
+  color: #003366;
+  font-weight: bold;
+  box-shadow: 0 0 15px #FFD700, inset 0 0 5px #fff;
+  transform: scale(1.05);
+}
+
+  /* Piso base */
+  .floor {
+    height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+  }
+.floor::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(5, 13, 72, 0.4) 50%,
+    rgba(0, 0, 0, 0.65) 100%
+  );
+  z-index: 1;
+}
+
+
+.content {
+  z-index: 10;
+  position: relative;
+}
+
+
+  /* Fondo específico por piso */
+  #inicio {
+    background-image: url(assets/elevadores.jpeg);
+    
+  }
+
+  #servicios {
+    background-image: url(assets/OIP.webp);
+  }
+
+  #contacto {
+    background-image: url(assets/OIP.webp);
+  }
+
+  #piso4 {
+    background-image: url(assets/OIP.webp);
+  }
+
+  /* Puertas del elevador */
+.door-left, .door-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: linear-gradient(135deg, #444, #222 60%, #555);
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.8),  /* sombra interna para profundidad */
+    0 3px 8px rgba(0, 0, 0, 0.6);       /* sombra externa */
+  border: 2px solid #666;
+  border-radius: 0 8px 8px 0;
+  z-index: 5;
+  transform-origin: center left;
+  transition: transform 2.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
+  cursor: default;
+}
+
+/* Para la puerta derecha invertimos el borde redondeado y origen */
+.door-right {
+  right: 0;
+  background: linear-gradient(45deg, #444, #222 60%, #555);
+  border-radius: 8px 0 0 8px;
+  transform-origin: center right;
+}
+
+.door-left {
+  left: 0;
+  transform-origin: center left;
+}
+
+/* Estado cerrado */
+.door-left {
+  transform: translateX(0) rotateY(0deg);
+}
+
+.door-right {
+  transform: translateX(0) rotateY(0deg);
+}
+
+/* Estado abierto */
+.floor.open .door-left {
+  transform: translateX(-105%) rotateY(-15deg);
+  box-shadow:
+    inset 0 0 15px rgba(255, 255, 255, 0.15),
+    0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.floor.open .door-right {
+  transform: translateX(105%) rotateY(15deg);
+  box-shadow:
+    inset 0 0 15px rgba(255, 255, 255, 0.15),
+    0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+
+  /* Tarjetas con glassmorphism */
+/* Estilo base para las tarjetas */
+.content {
+  position: relative;
+  z-index: 10;
+  max-width: 700px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2.5rem 2rem;
+  border-radius: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(40px) scale(0.9);
+  transition: 
+    opacity 1.2s ease, 
+    transform 1.2s ease, 
+    box-shadow 0.3s ease;
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  cursor: default;
+}
+
+/* Animación al abrir piso */
+.floor.open .content {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Efecto hover: levanta y brilla la tarjeta */
+.content:hover {
+  box-shadow: 0 20px 40px rgba(17, 0, 255, 0.414);
+  transform: translateY(-8px) scale(1.05);
+  transition: 
+    box-shadow 0.4s ease, 
+    transform 0.4s ease;
+}
+
+/* Animaciones específicas para cada piso (puedes ajustar o añadir más) */
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.floor#inicio .content {
+  animation: fadeInScale 1.3s ease forwards;
+}
+
+.floor#servicios .content {
+  animation: fadeInScale 1.4s ease forwards;
+}
+
+.floor#contacto .content {
+  animation: fadeInScale 1.5s ease forwards;
+}
+
+.floor#piso4 .content {
+  animation: fadeInScale 1.6s ease forwards;
+}
+
+
+  /* Títulos decorados */
+  h1, h2 {
+    font-size: 2.2rem;
+    margin-bottom: 1rem;
+    color: #ffffff;
+    position: relative;
+  }
+
+  h1::after, h2::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 4px;
+    width: 60px;
+    background-color: #FFD700;
+    border-radius: 4px;
+  }
+
+  p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+
+  /* Lista de servicios */
+  ul {
+    list-style: none;
+    padding: 0;
+    text-align: left;
+    margin-top: 1rem;
+  }
+
+  ul li {
+    padding-left: 1.5rem;
+    position: relative;
+    margin-bottom: 0.7rem;
+    font-size: 1.1rem;
+  }
+
+  ul li::before {
+    content: "✔️";
+    color: #FFD700;
+    font-size: 1.2rem;
+    position: absolute;
+    left: 0;
+    top: 0.1rem;
+  }
+
+.carousel {
+  position: relative;
+  max-width: 500px;
+  margin: 1.5rem auto 0 auto;
+  height: 3.5rem; /* un poco más alto para mejor lectura */
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.2rem;
+  font-size: 1.3rem;
+  color: #fff;
+  user-select: none;
+
+}
+
+.carousel-item {
+  position: absolute;
+  width: 100%;
+  opacity: 0;
+  transition: opacity 1s ease;
+  text-align: center;
+  pointer-events: none; /* evitar clics en invisibles */
+}
+
+.carousel-item.activo {
+  opacity: 1;
+  pointer-events: auto;
+  position: relative;
+}
+
+    .carousel-controls {
+      margin-top: 0.7rem;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .carousel-controls button {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .carousel-controls button:hover {
+      transform: scale(1.2);
+    }
+
+    .carousel-controls svg {
+      width: 42px;
+      height: 42px;
+    }
+
+    .carousel-controls circle {
+      fill: #FFD700;
+    }
+
+    .carousel-controls polyline {
+      stroke: #003366;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+/* Indicadores de puntos */
+.carousel-indicators {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.carousel-indicators span {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin: 0 6px;
+  background-color: rgba(255, 215, 0, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.4s ease;
+}
+
+.carousel-indicators span.activo {
+  background-color: #ffd700;
+  box-shadow: 0 0 6px #ffd700;
+}
+
+
+
+  /* Formulario */
+  form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 2rem;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+form input,
+form textarea {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+form input::placeholder,
+form textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+form input:focus,
+form textarea:focus {
+  border-color: #FFD700;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 8px #FFD70044;
+}
+
+/* Botón personalizado */
+form button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FFD700;
+  color: #003366;
+  padding: 0.8rem 1.8rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  gap: 0.6rem;
+}
+
+form button:hover {
+  background-color: #e6c200;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+}
+
+form button:active {
+  transform: translateY(1px);
+}
+
+/* Icono dentro del botón */
+form button svg {
+  width: 20px;
+  height: 20px;
+  fill: #003366;
+}
+
+
+  /* Pie de página */
+  footer {
+    text-align: center;
+    padding: 1rem;
+    background-color: rgba(0, 51, 102, 0.85);
+    color: white;
+    border-radius: 12px;
+  }
+
+  /* Animaciones opcionales */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .floor#inicio .content { animation: fadeIn 1.2s ease-out forwards; }
+  .floor#servicios .content { animation: slideUp 1.2s ease-out forwards; }
+  .floor#contacto .content { animation: zoomIn 1.2s ease-out forwards; }
+
+  /* Estilo para mensajes de validación */
+input:invalid:not(:placeholder-shown),
+textarea:invalid:not(:placeholder-shown) {
+  border-color: #ff4d4d;
+  box-shadow: 0 0 5px #ff4d4d66;
+}
+
+input:valid,
+textarea:valid {
+  border-color: #50fa7b;
+  box-shadow: 0 0 5px #50fa7b44;
+}
+
+/* Estilo para mensaje de éxito */
+.mensaje-exito {
+  margin-top: 1rem;
+  color: #ffffff;
+  font-weight: bold;
+  background-color: rgba(105, 237, 88, 0.899);
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  animation: aparecer 0.8s ease-out forwards;
+}
+
+@keyframes aparecer {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes aparecerTexto {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    text-shadow: none;
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.2);
+  }
+}
+
+.floor#inicio .content h1 {
+  animation: aparecerTexto 2s ease-out forwards;
+}
+
+
+</style>
+
+
+</head>
+<body>
+
+<nav class="elevator-panel">
+  <a href="#inicio">Inicio</a>
+  <a href="#servicios">Servicios</a>
+  <a href="#contacto">Contacto</a>
+  <a href="#piso4">2025</a>
+</nav>
+
+
+<!-- Piso 1 -->
+<div class="floor" id="inicio">
+  <div class="door-left"></div>
+  <div class="door-right"></div>
+  <div class="content">
+    <h1>Servicio en Elevadores</h1>
+    <p>Subiendo la calidad a otro nivel</p>
+  </div>
+</div>
+
+<!-- Piso 2 -->
+<div class="floor" id="servicios">
+    <div class="door-left"></div>
+    <div class="door-right"></div>
+    <div class="content">
+      <h2>Servicios</h2>
+      <div class="carousel">
+        <div class="carousel-item activo">✅ Mantenimiento preventivo y correctivo</div>
+        <div class="carousel-item">🔧 Reparación de sistemas eléctricos y mecánicos</div>
+        <div class="carousel-item">🏗️ Instalación de nuevos elevadores</div>
+        <div class="carousel-item">📋 Inspecciones y certificaciones</div>
+      </div>
+      <div class="carousel-controls">
+        <button id="prev" aria-label="Anterior">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="12" />
+            <polyline points="14 6 8 12 14 18" fill="none"/>
+          </svg>
+        </button>
+        <button id="next" aria-label="Siguiente">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="12" />
+            <polyline points="10 6 16 12 10 18" fill="none"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+<!-- Piso 3 -->
+<div class="floor" id="contacto">
+  <div class="door-left"></div>
+  <div class="door-right"></div>
+  <div class="content">
+    <h2>Contáctanos</h2>
+<form>
+  <input type="text" placeholder="Tu nombre" required>
+  <input type="email" placeholder="Tu correo electrónico" required>
+  <textarea rows="4" placeholder="Escribe tu mensaje..." required></textarea>
+  <button type="submit">
+    Enviar
+    <svg viewBox="0 0 24 24">
+      <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+    </svg>
+  </button>
+  <div id="mensajeExito" class="mensaje-exito" style="display: none;">
+   ¡Mensaje enviado con éxito!
+</div>
+
+</form>
+
+    <p>📞 Tel: 81 1234 5678 | ✉ contacto@elevadors.com</p>
+  </div>
+</div>
+
+<!-- Piso 4 -->
+<div class="floor" id="piso4">
+  <div class="door-left"></div>
+  <div class="door-right"></div>
+  <div class="content">
+    <footer>
+      <p>&copy; 2025 Servicio en Elevadors. Todos los derechos reservados.</p>
+    </footer>
+  </div>
+</div>
+
+
+<!-- Sonido elevador -->
+<audio id="ding" preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-elevator-tone-2861.mp3" type="audio/mpeg">
+</audio>
+
+
+<script>
+  const floors = document.querySelectorAll(".floor");
+  function cerrarPuertas() {
+  floors.forEach(floor => {
+    floor.classList.remove("open");
+  });
+}
+
+  const ding = document.getElementById("ding");
+  const navLinks = document.querySelectorAll(".elevator-panel a");
+
+  let soundEnabled = false;
+
+  // Habilita sonido al primer clic
+  window.addEventListener("click", () => {
+    soundEnabled = true;
+  });
+
+function cerrarPuertas() {
+  floors.forEach(floor => {
+    floor.classList.remove("open");
+  });
+}
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.getAttribute("id");
+
+      cerrarPuertas(); // Cierra todo antes de abrir el nuevo
+
+      // Abre puertas del nuevo piso
+      entry.target.classList.add("open");
+
+      // Reproducir sonido solo si ya hay interacción
+      if (soundEnabled) {
+        ding.currentTime = 0;
+        ding.play().catch(() => {});
+      }
+
+      // Iluminar el botón del piso actual
+      navLinks.forEach(link => {
+        link.classList.toggle("activo", link.getAttribute("href") === `#${id}`);
+      });
+    }
+  });
+}, { threshold: 0.7 });
+
+
+  floors.forEach(floor => observer.observe(floor));
+
+const items = document.querySelectorAll(".carousel-item");
+const prevBtn = document.getElementById("prev");
+const nextBtn = document.getElementById("next");
+const indicatorsContainer = document.createElement("div");
+indicatorsContainer.className = "carousel-indicators";
+document.querySelector(".carousel").after(indicatorsContainer);
+
+let currentIndex = 0;
+let timer;
+
+function mostrarItem(index) {
+  items.forEach((item, i) => {
+    item.classList.toggle("activo", i === index);
+  });
+  updateIndicators(index);
+  currentIndex = index;
+  resetTimer();
+}
+
+// Crear indicadores (puntos)
+function crearIndicadores() {
+  for(let i = 0; i < items.length; i++) {
+    const span = document.createElement("span");
+    span.addEventListener("click", () => mostrarItem(i));
+    indicatorsContainer.appendChild(span);
+  }
+}
+
+function updateIndicators(activeIndex) {
+  const spans = indicatorsContainer.children;
+  for(let i = 0; i < spans.length; i++) {
+    spans[i].classList.toggle("activo", i === activeIndex);
+  }
+}
+
+function resetTimer() {
+  if(timer) clearInterval(timer);
+  timer = setInterval(() => {
+    let nextIndex = (currentIndex + 1) % items.length;
+    mostrarItem(nextIndex);
+  }, 4000); // cambia cada 4 segundos
+}
+
+prevBtn.addEventListener("click", () => {
+  let prevIndex = (currentIndex - 1 + items.length) % items.length;
+  mostrarItem(prevIndex);
+});
+
+nextBtn.addEventListener("click", () => {
+  let nextIndex = (currentIndex + 1) % items.length;
+  mostrarItem(nextIndex);
+});
+
+// Inicializar
+crearIndicadores();
+mostrarItem(0);
+
+const formulario = document.querySelector("form");
+const mensajeExito = document.getElementById("mensajeExito");
+
+formulario.addEventListener("submit", function (e) {
+  e.preventDefault(); // Evita que recargue la página
+
+  // Opcional: Validación rápida (ya que HTML5 lo hace en gran parte)
+  const campos = formulario.querySelectorAll("input, textarea");
+  let todoValido = true;
+  campos.forEach(campo => {
+    if (!campo.checkValidity()) {
+      todoValido = false;
+    }
+  });
+
+  if (todoValido) {
+    mensajeExito.style.display = "block";
+    setTimeout(() => {
+      mensajeExito.style.display = "none";
+    }, 5000); // Oculta el mensaje tras 5 segundos
+    formulario.reset(); // Limpia el formulario
+  }
+});
+
+</script>
+
+
+</body>
+</html>
